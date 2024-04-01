@@ -256,9 +256,9 @@ where
           let suggestions :=  scripts.map (
             fun s => {suggestion := s})
           TryThis.addSuggestions stx suggestions
-        -- if !pfs.isEmpty then
-        --   evalTactic (← `(tactic|sorry))
-        --   return ()
+        if !pfs.isEmpty then
+          evalTactic (← `(tactic|sorry))
+          return ()
 
     catch _ =>
       pure ()
@@ -301,9 +301,9 @@ where
             let suggestions :=  scripts.map (
               fun s => {suggestion := s})
             TryThis.addSuggestions stx suggestions
-          -- if !pfs.isEmpty then
-          --   evalTactic (← `(tactic|sorry))
-          --   return ()
+          if !pfs.isEmpty then
+            evalTactic (← `(tactic|sorry))
+            return ()
       catch _ =>
         pure ()
   autoStartImplAux' (stx: Syntax)(fromBy: Bool) : TacticM Unit :=

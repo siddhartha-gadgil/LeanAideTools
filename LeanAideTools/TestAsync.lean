@@ -25,3 +25,8 @@ warning: declaration uses 'sorry'
 -/
 example : sillyN ≤ 4 := byy
   rw [silly]
+
+
+#auto sorry
+
+example : 1 = 2 := byy
