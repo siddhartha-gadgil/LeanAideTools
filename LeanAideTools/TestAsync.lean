@@ -23,10 +23,7 @@ info: Try this: by
 ---
 warning: declaration uses 'sorry'
 -/
-example : sillyN ≤ 4 := byy
+example : sillyN ≤ 6 := byy
   rw [silly]
 
-
-#auto sorry
-
-example : 1 = 2 := byy
+#autos [aesop, rw [Nat.succ]]

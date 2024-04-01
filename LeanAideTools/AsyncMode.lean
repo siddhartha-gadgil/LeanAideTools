@@ -39,14 +39,26 @@ initialize autoTacticStringsIO : IO.Ref (List String) ←
 
 syntax (name:= leanaide_auto) "#auto" tactic : command
 
+syntax (name:= leanaide_autos) "#autos" "["tactic ,*"]"* : command
+
 open Command
 @[command_elab leanaide_auto] def autoCmd : CommandElab := fun stx =>
   match stx with
-  | `(command|#auto $tac) => do
+  | `(command|#auto $tac:tactic) => do
     let tac := tac.raw.reprint.get!
     autoTacticStringsIO.modify fun l => l  ++ [tac]
     return ()
   | _ => throwUnsupportedSyntax
+
+@[command_elab leanaide_autos] def autosCmd : CommandElab := fun stx =>
+  match stx with
+  | `(command|#autos [$ts,*]) => do
+    let tacs := ts.getElems.toList.map (fun t => t.raw.reprint.get!)
+    autoTacticStringsIO.modify fun l => l  ++ tacs
+    return ()
+  | _ => throwUnsupportedSyntax
+
+#check PrettyPrinter.ppCategory
 
 def autoTactics : CoreM <| List (TSyntax `tactic) := do
   let autoTacticStrings ← autoTacticStringsIO.get
