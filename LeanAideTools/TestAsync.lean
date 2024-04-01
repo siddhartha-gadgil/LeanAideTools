@@ -4,7 +4,7 @@ import LeanAideTools.AsyncMode
 #eval autoTactics
 
 
-example : 1 = 1 := by exact?
+example : 1 = 1 := byy
 
 opaque sillyN : Nat
 
@@ -23,6 +23,5 @@ info: Try this: by
 ---
 warning: declaration uses 'sorry'
 -/
-example : sillyN ≤ 4 := by
+example : sillyN ≤ 4 := byy
   rw [silly]
-  simp?

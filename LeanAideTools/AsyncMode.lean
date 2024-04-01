@@ -34,10 +34,22 @@ We have a function of type `TacticM Unit` which
 * We then restore these states.
 -/
 
+initialize autoTacticStringsIO : IO.Ref (List String) ←
+  IO.mkRef ["rfl", "simp?", "exact?", "aesop?"]
 
-def autoTacticStrings := ["rfl", "simp?", "exact?", "aesop?"]
+syntax (name:= leanaide_auto) "#auto" tactic : command
+
+open Command
+@[command_elab leanaide_auto] def autoCmd : CommandElab := fun stx =>
+  match stx with
+  | `(command|#auto $tac) => do
+    let tac := tac.raw.reprint.get!
+    autoTacticStringsIO.modify fun l => l  ++ [tac]
+    return ()
+  | _ => throwUnsupportedSyntax
 
 def autoTactics : CoreM <| List (TSyntax `tactic) := do
+  let autoTacticStrings ← autoTacticStringsIO.get
   let ts ← autoTacticStrings.filterMapM (fun s => do
     let tac? := runParserCategory (← getEnv) `tactic s
     pure tac?.toOption)
@@ -244,9 +256,9 @@ where
           let suggestions :=  scripts.map (
             fun s => {suggestion := s})
           TryThis.addSuggestions stx suggestions
-        if !pfs.isEmpty then
-          evalTactic (← `(tactic|sorry))
-          return ()
+        -- if !pfs.isEmpty then
+        --   evalTactic (← `(tactic|sorry))
+        --   return ()
 
     catch _ =>
       pure ()
@@ -289,9 +301,9 @@ where
             let suggestions :=  scripts.map (
               fun s => {suggestion := s})
             TryThis.addSuggestions stx suggestions
-          if !pfs.isEmpty then
-            evalTactic (← `(tactic|sorry))
-            return ()
+          -- if !pfs.isEmpty then
+          --   evalTactic (← `(tactic|sorry))
+          --   return ()
       catch _ =>
         pure ()
   autoStartImplAux' (stx: Syntax)(fromBy: Bool) : TacticM Unit :=
