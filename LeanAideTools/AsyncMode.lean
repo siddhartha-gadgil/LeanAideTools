@@ -82,8 +82,6 @@ def appendTactics' (ts : Array (TSyntax `tactic))
       `(tacticSeq| $[$ts']*)
   | _ => `(tacticSeq| $[$ts]*)
 
-#eval autoTactics
-
 def EIO.runToIO' (eio: EIO Exception α) : IO α  := do
   match ←  eio.toIO' with
   | Except.ok x =>
@@ -246,6 +244,10 @@ where
           let suggestions :=  scripts.map (
             fun s => {suggestion := s})
           TryThis.addSuggestions stx suggestions
+        if !pfs.isEmpty then
+          evalTactic (← `(tactic|sorry))
+          return ()
+
     catch _ =>
       pure ()
   autoStartImplAux (stx: Syntax)
@@ -287,6 +289,9 @@ where
             let suggestions :=  scripts.map (
               fun s => {suggestion := s})
             TryThis.addSuggestions stx suggestions
+          if !pfs.isEmpty then
+            evalTactic (← `(tactic|sorry))
+            return ()
       catch _ =>
         pure ()
   autoStartImplAux' (stx: Syntax)(fromBy: Bool) : TacticM Unit :=

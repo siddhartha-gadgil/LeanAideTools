@@ -1,5 +1,9 @@
 import LeanAideTools.AsyncMode
 
+
+#eval autoTactics
+
+
 example : 1 = 1 := by exact?
 
 opaque sillyN : Nat
@@ -20,6 +24,5 @@ info: Try this: by
 warning: declaration uses 'sorry'
 -/
 example : sillyN ≤ 4 := by
-with_aide
   rw [silly]
-  sorry
+  simp?
