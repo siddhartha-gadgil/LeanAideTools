@@ -10,3 +10,5 @@ lean_lib «LeanAideTools» where
 @[default_target]
 lean_exe «leanaidetools» where
   root := `Main
+
+require aesop from git "https://github.com/JLimperg/aesop" @ "v4.7.0-rc2"
