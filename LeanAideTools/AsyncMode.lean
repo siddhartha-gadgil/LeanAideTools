@@ -2,6 +2,7 @@ import Lean
 import Lean.Elab.Tactic
 import Lean.Meta.Tactic.TryThis
 import Aesop
+import LeanAideTools.Basic
 
 open Lean Meta Elab Term Tactic Core Parser Tactic
 open Std.Tactic
@@ -114,10 +115,15 @@ def EIO.runToIO' (eio: EIO Exception α) : IO α  := do
       let msg ← e.toMessageData.toString
       IO.throwServerError msg
 
-register_option aided_by.delay : Nat :=
+register_option leanaide.auto_tactic.delay : Nat :=
   { defValue := 50
-    group := "aided_by"
+    group := "leanaide.auto_tactic"
     descr := "Time to wait after launching a task." }
+
+register_option leanaide.auto_tactic.debug : Bool :=
+  { defValue := false
+    group := "leanaide.auto_tactic"
+    descr := "Wait for all tasks to complete." }
 
 def isSorry (tacticCode: TSyntax `tactic) : TermElabM Bool := do
   let goal ← mkFreshExprMVar (mkConst ``False)
@@ -179,15 +185,17 @@ end Caches
 
 
 def runAndCacheM
-  (tac : TSyntax `tactic)(goal: MVarId) (target : Expr)  : MetaM Unit :=
+  (tac : TSyntax `tactic)(goal: MVarId) (target : Expr)  :
+    MetaM (Array MessageData) :=
   goal.withContext do
     let lctx ← getLCtx
     let key : GoalKey := { goal := target, lctx := lctx.decls.toList }
     if ←isSpawned key then
-      return ()
+      return #[]
     markSpawned key
     let core₀ ← getThe Core.State
     let meta₀ ← getThe Meta.State
+    let mut messages := #[]
     try
       let (goals, ts) ← runTactic  goal (← tacAsSeq tac)
       unless goals.isEmpty do
@@ -199,16 +207,23 @@ def runAndCacheM
         term?   := some ts
         script := ← tacAsSeq tac
         }
+        let goalType ← inferType (mkMVar goal)
+        messages := messages.push <| m!"Tactic {tac} succeeded with goal {← ppExpr goalType}"
       putTactic key s
-    catch _ =>
+    catch error =>
+      trace[leanaide.auto_tactic.error] m!"Error in tactic {tac}: {error.toMessageData}"
+      messages := messages.push error.toMessageData
+      -- IO.println s!"Error in tactic {tac}: {← error.toMessageData.toString}"
       pure ()
+    messages  := messages.push m!"Finished tactic {tac}"
     set core₀
     set meta₀
+    return messages
 
 def runAndCacheIO
   (tac: TSyntax `tactic) (goal: MVarId) (target : Expr)
   (mctx : Meta.Context) (ms : Meta.State)
-  (cctx : Core.Context) (cs: Core.State) : IO Unit :=
+  (cctx : Core.Context) (cs: Core.State) : IO (Array MessageData) :=
   let eio :=
   (runAndCacheM  tac goal target).run' mctx ms |>.run' cctx cs
   let res := eio.runToIO'
@@ -253,14 +268,17 @@ where
     withMainContext do
     if (← getUnsolvedGoals).isEmpty then
         return ()
+    let mut tasks := #[]
     for autoCode in (← autoTactics) do
-      let ioSeek : IO Unit := runAndCacheIO
+      trace[leanaide.auto_tactic.info] m!"Running auto tactic: {autoCode}"
+      let ioSeek : IO (Array MessageData) := runAndCacheIO
         autoCode  (← getMainGoal) (← getMainTarget)
                 (← readThe Meta.Context) (← getThe Meta.State )
                 (← readThe Core.Context) (← getThe Core.State)
-      let _ ← ioSeek.asTask
+      let task ← ioSeek.asTask
+      tasks := tasks.push (task, autoCode)
     try
-      let delay  := aided_by.delay.get (← getOptions)
+      let delay  := leanaide.auto_tactic.delay.get (← getOptions)
       dbgSleep delay.toUInt32 fun _ => do
         let pfs ← fetchProofs
         let scripts := pfs.map (fun pf => pf.script)
@@ -276,15 +294,28 @@ where
         if !pfs.isEmpty then
           evalTactic (← `(tactic|sorry))
           return ()
-
     catch _ =>
       pure ()
+    let debug  := leanaide.auto_tactic.debug.get (← getOptions)
+    if debug then
+      let taskResults := tasks.map (fun (t, code) => (t.get, code))
+      for taskResult in taskResults do
+        match taskResult with
+        | (Except.error e, code) =>
+            trace[leanaide.auto_tactic.info] m!"Error in auto tactic {code}: {e}"
+        | (Except.ok messages, code) =>
+            trace[leanaide.auto_tactic.info] m!"Auto tactic {code} finished; messages:"
+            for msg in messages do
+              trace[leanaide.auto_tactic.info] msg
+
   autoStartImplAux (stx: Syntax)
   (tacticCode : TSyntax ``tacticSeq)(fromBy: Bool) : TacticM Unit :=
   withMainContext do
     initialSearch stx  fromBy
     let allTacs := getTactics tacticCode
     let mut cumTacs :  Array (TSyntax `tactic) := #[]
+    let mut tasks := #[]
+
     for tacticCode in allTacs do
       evalTactic tacticCode
       if ← isSorry tacticCode then
@@ -298,13 +329,14 @@ where
             TryThis.addSuggestion stx (← `(tacticSeq|$[$cumTacs]*))
         return ()
       for autoCode in (← autoTactics) do
-        let ioSeek : IO Unit := runAndCacheIO
+        let ioSeek : IO (Array MessageData) := runAndCacheIO
           autoCode  (← getMainGoal) (← getMainTarget)
                   (← readThe Meta.Context) (← getThe Meta.State )
                   (← readThe Core.Context) (← getThe Core.State)
-        let _ ← ioSeek.asTask
+        let task ← ioSeek.asTask
+        tasks := tasks.push (task, autoCode)
       try
-        let delay  := aided_by.delay.get (← getOptions)
+        let delay  := leanaide.auto_tactic.delay.get (← getOptions)
         dbgSleep delay.toUInt32 fun _ => do
           let pfs ← fetchProofs
           let scripts ←  pfs.mapM
@@ -323,6 +355,18 @@ where
             return ()
       catch _ =>
         pure ()
+    let debug  := leanaide.auto_tactic.debug.get (← getOptions)
+    if debug then
+      let taskResults := tasks.map (fun (t, code) => (t.get, code))
+      for taskResult in taskResults do
+        match taskResult with
+        | (Except.error e, code) =>
+            trace[leanaide.auto_tactic.info] m!"Error in auto tactic {code}: {e}"
+        | (Except.ok messages, code) =>
+            trace[leanaide.auto_tactic.info] m!"Auto tactic {code} finished; messages:"
+            for msg in messages do
+              trace[leanaide.auto_tactic.info] msg
+
   autoStartImplAux' (stx: Syntax)(fromBy: Bool) : TacticM Unit :=
     withMainContext do
     initialSearch stx fromBy

@@ -3,6 +3,8 @@ import LeanAideTools.AsyncMode
 
 #eval autoTactics
 
+set_option trace.leanaide.auto_tactic.info true
+set_option leanaide.auto_tactic.debug true
 
 example : 1 = 1 := byy
 
@@ -10,11 +12,14 @@ opaque sillyN : Nat
 
 axiom silly : sillyN = 2
 
-/--
-warning: declaration uses 'sorry'
--/
+-- #autos [rw [silly], simp [silly]]
+
+set_option leanaide.auto_tactic.delay 0 in
 example : sillyN ≤ 3 := byy
-  sorry
+  rw [silly]
+  skip
+  skip
+
 
 /--
 info: Try this: by
