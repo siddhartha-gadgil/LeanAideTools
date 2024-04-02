@@ -26,4 +26,8 @@ warning: declaration uses 'sorry'
 example : sillyN ≤ 6 := byy
   rw [silly]
 
+example : sillyN ≤ 7 := by
+    rw [silly]
+    simp only [Nat.reduceLE]
+
 #autos [aesop, rw [Nat.succ]]

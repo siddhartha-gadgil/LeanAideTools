@@ -229,6 +229,11 @@ macro "byy" tacs:tacticSeq : term =>
 macro "byy"  : term =>
   `(by with_aide from_by)
 
+macro "doo" tacs:tacticSeq : tactic =>
+  `(tactic|with_aide $tacs)
+
+macro "doo"  : tactic =>
+  `(tactic|with_aide)
 
 @[tactic autoTacs] def autoStartImpl : Tactic := fun stx =>
 withMainContext do
