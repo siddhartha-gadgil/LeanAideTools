@@ -36,3 +36,8 @@ example : sillyN ≤ 7 := by
     simp only [Nat.reduceLE]
 
 #autos [aesop, rw [Nat.succ]]
+
+#auto (sleep 300; simp [silly])
+
+example : sillyN ≤ 8 := byy
+  skip

@@ -311,7 +311,9 @@ where
   autoStartImplAux (stx: Syntax)
   (tacticCode : TSyntax ``tacticSeq)(fromBy: Bool) : TacticM Unit :=
   withMainContext do
-    initialSearch stx  fromBy
+    initialSearch stx fromBy
+    if (← getUnsolvedGoals).isEmpty then
+        return ()
     let allTacs := getTactics tacticCode
     let mut cumTacs :  Array (TSyntax `tactic) := #[]
     let mut tasks := #[]
