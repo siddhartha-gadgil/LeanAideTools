@@ -18,7 +18,7 @@ set_option leanaide.auto_tactic.delay 0 in
 example : sillyN ≤ 3 := byy
   rw [silly]
   skip
-  skip
+  sleep 100
 
 
 /--

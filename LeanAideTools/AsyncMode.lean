@@ -36,7 +36,7 @@ We have a function of type `TacticM Unit` which
 -/
 
 initialize autoTacticStringsIO : IO.Ref (List String) ←
-  IO.mkRef ["rfl", "simp?", "aesop?", "exact?"]
+  IO.mkRef ["rfl", "simp?", "omega", "aesop?", "exact?"]
 
 syntax (name:= leanaide_auto) "#auto" tactic : command
 
