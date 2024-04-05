@@ -3,8 +3,8 @@ import LeanAideTools.AsyncMode
 
 #eval autoTactics
 
-set_option trace.leanaide.auto_tactic.info true
-set_option leanaide.auto_tactic.debug true
+-- set_option trace.leanaide.auto_tactic.info true
+-- set_option leanaide.auto_tactic.debug true
 
 example : 1 = 1 := byy
 
@@ -30,6 +30,7 @@ warning: declaration uses 'sorry'
 -/
 example : sillyN ≤ 6 := byy
   rw [silly]
+  sleep 200
 
 example : sillyN ≤ 7 := by
     rw [silly]
@@ -41,3 +42,4 @@ example : sillyN ≤ 7 := by
 
 example : sillyN ≤ 8 := byy
   skip
+  sorry
