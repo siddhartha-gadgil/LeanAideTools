@@ -72,3 +72,12 @@ For use with a `Mathlib` branch, add the dependency in the lakefile while workin
 
 To use the mode in a file, add `import LeanAideTools` along with your other imports.
 
+## Missing features?
+
+There are two features that I hope to work on eventually:
+
+* When a tactic like `exact?` finds a proof, the user gets a hyperlink and code-action to complete the proof with this tactic. But this tactic in turn gives a suggested proof with which it can be replaced. The two steps should ideally be replaced by just one.
+
+* The tactic mode does not see within `case`, `match`, bullet points etc. This is a limitation of the current implementation. The `doo` syntax is provided to re-enter the auto-tactic mode in these cases, but ideally one should not have to do this.
+
+Any comments, suggestions, or bug reports are welcome. Also contributions are welcome.
