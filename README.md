@@ -6,6 +6,8 @@ At present, there is a single tool, for running tactics automatically in the bac
 
 ## Running tactics automatically
 
+### Simple Example
 
+![Simple Example](https://github.com/siddhartha-gadgil/LeanAideTools/blob/v4.7.0/assets/lat1.gif)
 
 ## Installation
