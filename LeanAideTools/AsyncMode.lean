@@ -59,8 +59,6 @@ open Command
     return ()
   | _ => throwUnsupportedSyntax
 
-#check PrettyPrinter.ppCategory
-
 def autoTactics : CoreM <| List (TSyntax `tactic) := do
   let autoTacticStrings ← autoTacticStringsIO.get
   let ts ← autoTacticStrings.filterMapM (fun s => do
