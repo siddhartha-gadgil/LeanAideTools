@@ -90,7 +90,7 @@ elab "#setup_search" : command => do
     logInfo m!"Downloading embeddings from {url}"
     let _ ←  IO.Process.spawn {
       cmd := "lake"
-      args := #["exe", "fetch"]
+      args := #["exe", "fetch_embeddings"]
     }
     logInfo "Fetched embeddings for search"
 
@@ -100,29 +100,29 @@ elab "#setup_search!" : command => do
   logInfo m!"Downloading embeddings from {url}"
   let _ ←  IO.Process.spawn {
     cmd := "lake"
-    args := #["exe", "fetch", "-f"]
+    args := #["exe", "fetch_embeddings", "-f"]
   }
   logInfo "Fetched embeddings for search"
 
-syntax (name := leanaid_search) "#leanaid_search" str (num)? : command
+syntax (name := leanaid_search) "#leanaid_search" str (num)? ";" : command
 
 @[command_elab leanaid_search]
 unsafe def leanAideSearchElab : CommandElab := fun stx => do
   match stx with
-  | `(command| #leanaid_search $doc:str) =>
+  | `(command| #leanaid_search $doc:str ;) =>
     let doc := doc.getString
-    let out ← IO.Process.run {cmd := "nearest", args := #[doc]}
+    let out ← IO.Process.run {cmd := "nearest_embeddings", args := #[doc]}
     logOutput out
-  | `(command| #leanaid_search $doc:str $n) =>
+  | `(command| #leanaid_search $doc:str $n ;) =>
     let doc := doc.getString
     let n := n.getNat
-    let out ← IO.Process.run {cmd := "nearest", args := #[doc, toString n]}
+    let out ← IO.Process.run {cmd := "nearest_embeddings", args := #[doc, toString n]}
     logOutput out
   | _ => throwUnsupportedSyntax
   where logOutput (out : String) : CommandElabM Unit := do
     match Json.parse out with
     | Except.error err =>
-      logError "Could not parse JSON response from `nearest` command."
+      logError "Could not parse JSON response from `nearest_embeddings` command."
       logError err
     | Except.ok json =>
       match json.getArr? with
