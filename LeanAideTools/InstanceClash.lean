@@ -1,7 +1,7 @@
 import Lean
 open Lean Meta Elab Command Syntax
 
-namespace lean_lion
+
 /-!
 ## Spotting multiple instances of the same typeclass
 
@@ -60,7 +60,7 @@ elab "check_clashes" : tactic => do
     match clash? with
     | none => return ()
     | some {e1 := e, e2 := e', type := type} => do
-        logError m!"instances clash: `{← ppExpr e}` and `{← ppExpr e'}` are instances of the same typeclass `{← ppExpr type}` with different instances."
+        Lean.throwError m!"instances clash: `{← ppExpr e}` and `{← ppExpr e'}` are instances of the same typeclass `{← ppExpr type}` with different instances."
         throwAbortTactic
 
 elab "warn_clashes" : tactic => do
@@ -72,56 +72,3 @@ elab "warn_clashes" : tactic => do
     | some {e1 := e, e2 := e', type := type} => do
         logWarning m!"instances clash: `{← ppExpr e}` and `{← ppExpr e'}` are instances of the same typeclass `{← ppExpr type}` with different instances."
         return ()
-
-/-!
-Example usage
--/
-
-instance collapseInst : HAdd String String String where
-  hAdd := String.append
-
-def collapse (a b: String): String :=
-  @HAdd.hAdd String String String collapseInst a b
-
-instance collapseInst' : HAdd String String String where
-  hAdd := fun a b => a ++ " " ++ b
-
-def collapse' (a b: String): String :=
-  @HAdd.hAdd String String String collapseInst' a b
-
-
-/--
-error: instances clash: `collapseInst'` and `collapseInst` are instances of the same typeclass `HAdd String String
-  String` with different instances.
----
-error: unsolved goals
-a b : String
-⊢ a + b = a + b
--/
-#guard_msgs in
-example (a b  : String) : collapse' a b = collapse a b := by
-  unfold collapse collapse'
-  check_clashes
-
-/--
-warning: instances clash: `collapseInst'` and `collapseInst` are instances of the same typeclass `HAdd String String
-  String` with different instances.
----
-error: unsolved goals
-a b : String
-⊢ a + b = a + b
--/
-#guard_msgs in
-example (a b  : String) : collapse' a b = collapse a b := by
-  unfold collapse collapse'
-  warn_clashes
-
-example (a b  : String) : collapse' a b = collapse a b := by
-  unfold collapse collapse'
-  try check_clashes
-  sorry
-
-example (a b  : String) : collapse' a b = collapse a b := by
-  unfold collapse collapse'
-  warn_clashes
-  sorry

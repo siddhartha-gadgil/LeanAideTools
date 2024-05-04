@@ -3,6 +3,7 @@ import Lean.Elab.Tactic
 import Lean.Meta.Tactic.TryThis
 import Aesop
 import LeanAideTools.Basic
+import LeanAideTools.InstanceClash
 
 open Lean Meta Elab Term Tactic Core Parser Tactic
 open Std.Tactic
@@ -38,6 +39,9 @@ We have a function of type `TacticM Unit` which
 initialize autoTacticStringsIO : IO.Ref (List String) ←
   IO.mkRef ["rfl", "simp?", "omega", "aesop?", "exact?"]
 
+initialize failTacticStringsIO : IO.Ref (List String) ←
+  IO.mkRef ["check_clashes"]
+
 syntax (name:= leanaide_auto) "#auto" tactic : command
 
 syntax (name:= leanaide_autos) "#autos" "["tactic ,*"]"* : command
@@ -59,12 +63,36 @@ open Command
     return ()
   | _ => throwUnsupportedSyntax
 
+elab "#fail" tac:tactic : command => do
+  let tac := tac.raw.reprint.get!
+  failTacticStringsIO.modify fun l => l  ++ [tac]
+  return ()
+
 def autoTactics : CoreM <| List (TSyntax `tactic) := do
   let autoTacticStrings ← autoTacticStringsIO.get
   let ts ← autoTacticStrings.filterMapM (fun s => do
     let tac? := runParserCategory (← getEnv) `tactic s
     pure tac?.toOption)
   return ts.map (fun t => ⟨t⟩)
+
+def failTactics : CoreM <| List (TSyntax `tactic) := do
+  let failTacticStrings ← failTacticStringsIO.get
+  let ts ← failTacticStrings.filterMapM (fun s => do
+    let tac? := runParserCategory (← getEnv) `tactic s
+    pure tac?.toOption)
+  return ts.map (fun t => ⟨t⟩)
+
+def runFailTactics : TacticM Unit :=
+  unless (← getUnsolvedGoals).isEmpty do
+  withMainContext do
+    let failTactics ← failTactics
+    for failTactic in failTactics do
+      unless (← getUnsolvedGoals).isEmpty do
+        -- logInfo m!"Running fail tactic: {failTactic}"
+        try
+          evalTactic failTactic
+        catch e =>
+          logError m!"Error in fail tactic {failTactic}: {e.toMessageData}"
 
 def getTactics (tacSeq : TSyntax ``tacticSeq) : Array (TSyntax `tactic) :=
   match tacSeq with
@@ -253,12 +281,16 @@ withMainContext do
 match stx with
 | `(tactic| with_aide from_by  $tacticCode) =>
     autoStartImplAux stx tacticCode true
+    runFailTactics
 | `(tactic| with_aide $tacticCode) =>
     autoStartImplAux stx tacticCode false
+    runFailTactics
 | `(tactic| with_aide from_by) => do
     autoStartImplAux' stx true
+    runFailTactics
 | `(tactic| with_aide) => do
     autoStartImplAux' stx false
+    runFailTactics
 | _ => throwUnsupportedSyntax
 where
   initialSearch (stx: Syntax)
