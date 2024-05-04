@@ -115,3 +115,13 @@ a b : String
 example (a b  : String) : collapse' a b = collapse a b := by
   unfold collapse collapse'
   warn_clashes
+
+example (a b  : String) : collapse' a b = collapse a b := by
+  unfold collapse collapse'
+  try check_clashes
+  sorry
+
+example (a b  : String) : collapse' a b = collapse a b := by
+  unfold collapse collapse'
+  warn_clashes
+  sorry
