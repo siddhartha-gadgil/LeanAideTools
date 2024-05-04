@@ -81,10 +81,10 @@ unsafe def findNearestEmbeddings (data : Array <| (String × String × Bool × S
           IO.throwServerError s!"error querying openai: {err}"
 
 
-elab "#setup_search" : command => do
+elab "#fetch_embeddings" : command => do
   let picklePath ← picklePath
   if (← picklePath.pathExists) then
-    logWarning m!"Embeddings already present at {picklePath}, use `#setup_search!` to redownload."
+    logWarning m!"Embeddings already present at {picklePath}, use `#fetch_embeddings!` to redownload."
   else
     let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
     logInfo m!"Downloading embeddings from {url}"
@@ -94,7 +94,7 @@ elab "#setup_search" : command => do
     }
     logInfo "Fetched embeddings for search"
 
-elab "#setup_search!" : command => do
+elab "#fetch_embeddings!" : command => do
   let picklePath ← picklePath
   let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
   logInfo m!"Downloading embeddings from {url}"
