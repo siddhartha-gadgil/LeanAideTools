@@ -11,4 +11,6 @@ lean_lib «LeanAideTools» where
 lean_exe «leanaidetools» where
   root := `Main
 
+lean_exe nearest where
+
 require aesop from git "https://github.com/JLimperg/aesop" @ "v4.7.0"

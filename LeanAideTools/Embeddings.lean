@@ -56,11 +56,9 @@ def embedQuery? (doc: String) : IO <| Except String Json := do
           "--data", data]}
     return Lean.Json.parse out
 
-unsafe def findNearestEmbeddings (doc: String) (n: Nat) :
-  CommandElabM <| List (String × String × String) := do
-    let picklePath ← picklePath
-    withUnpickle  picklePath <|
-    fun (data : Array <| (String × String × Bool × String) ×  FloatArray) => do
+unsafe def findNearestEmbeddings (data : Array <| (String × String × Bool × String) ×  FloatArray) (doc: String) (n: Nat) :
+  IO <| List (String × String × String) := do
+        IO.println s!"Read {data.size} embeddings"
         let data' := data.map (fun ((doc, thm, _, name), emb) => ((doc, thm, name), emb))
         let queryRes? ← embedQuery? doc
         match queryRes? with
@@ -68,23 +66,28 @@ unsafe def findNearestEmbeddings (doc: String) (n: Nat) :
           let queryData? := queryRes.getObjVal? "data"
           match queryData? with
           | Except.error error =>
-              throwError s!"no data in query result: {error}"
+              IO.throwServerError  s!"no data in query result: {error}"
           | Except.ok queryDataArr =>
+            IO.eprintln s!"Got query data"
             let queryData := queryDataArr.getArrVal? 0 |>.toOption.get!
             match queryData.getObjValAs? (Array Float) "embedding" with
             | Except.ok queryEmbedding =>
-              return nearestDocsToDocEmbedding data' queryEmbedding n distL2Sq
+              let res :=
+                nearestDocsToDocEmbedding data' queryEmbedding n distL2Sq
+              return res
             | Except.error error =>
-              throwError s!"no embedding in query result: {error} in {queryData}"
+              IO.throwServerError s!"no embedding in query result: {error} in {queryData}"
         | Except.error err =>
-          throwError s!"error querying openai: {err}"
+          IO.throwServerError s!"error querying openai: {err}"
 
 
 elab "#setup_search" : command => do
   let picklePath ← picklePath
   if (← picklePath.pathExists) then
     logWarning m!"Embeddings already present at {picklePath}, use `#setup_search!` to redownload."
-  let url := "https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
+  let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
+  logInfo s!"Redownloading embeddings to {url}"
+
   let _ ←  IO.Process.run {
     cmd := "curl"
     args := #["-f", "-o", picklePath.toString, "-L", url]
@@ -93,7 +96,7 @@ elab "#setup_search" : command => do
 
 elab "#setup_search!" : command => do
   let picklePath ← picklePath
-  let url := "https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
+  let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
   let _ ←  IO.Process.run {
     cmd := "curl"
     args := #[url, "--output", picklePath.toString]
@@ -107,10 +110,20 @@ unsafe def leanAideSearchElab : CommandElab := fun stx => do
 match stx with
 | `(command| #leanaid_search $doc:str) =>
   let doc := doc.getString
-  let res ← findNearestEmbeddings doc 5
-  res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
+  let picklePath ← picklePath
+  IO.println s!"Reading embeddings from {picklePath}"
+  withUnpickle  picklePath <|
+    fun (data : Array <| (String × String × Bool × String) ×  FloatArray) => do
+    let res ← findNearestEmbeddings data doc 5
+    res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
 | `(command| #leanaid_search $doc:str $n) =>
   let doc := doc.getString
-  let res ← findNearestEmbeddings doc n.getNat
-  res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
+  let picklePath ← picklePath
+  IO.println s!"Reading embeddings from {picklePath}"
+  withUnpickle  picklePath <|
+    fun (data : Array <| (String × String × Bool × String) ×  FloatArray) => do
+    let res ← findNearestEmbeddings data doc n.getNat
+    res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
 | _ => throwUnsupportedSyntax
+
+-- #setup_search
