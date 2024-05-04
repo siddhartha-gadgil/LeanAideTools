@@ -58,7 +58,7 @@ def embedQuery? (doc: String) : IO <| Except String Json := do
 
 unsafe def findNearestEmbeddings (data : Array <| (String × String × Bool × String) ×  FloatArray) (doc: String) (n: Nat) :
   IO <| List (String × String × String) := do
-        IO.println s!"Read {data.size} embeddings"
+        -- IO.println s!"Read {data.size} embeddings"
         let data' := data.map (fun ((doc, thm, _, name), emb) => ((doc, thm, name), emb))
         let queryRes? ← embedQuery? doc
         match queryRes? with
@@ -108,19 +108,34 @@ syntax (name := leanaid_search) "#leanaid_search" str (num)? : command
 
 @[command_elab leanaid_search]
 unsafe def leanAideSearchElab : CommandElab := fun stx => do
-match stx with
-| `(command| #leanaid_search $doc:str) =>
-  let doc := doc.getString
-  let out ← IO.Process.run {cmd := "nearest", args := #[doc]}
-  logInfo out
-| `(command| #leanaid_search $doc:str $n) =>
-  let doc := doc.getString
-  let picklePath ← picklePath
-  IO.println s!"Reading embeddings from {picklePath}"
-  withUnpickle  picklePath <|
-    fun (data : Array <| (String × String × Bool × String) ×  FloatArray) => do
-    let res ← findNearestEmbeddings data doc n.getNat
-    res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
-| _ => throwUnsupportedSyntax
-
--- #setup_search
+  match stx with
+  | `(command| #leanaid_search $doc:str) =>
+    let doc := doc.getString
+    let out ← IO.Process.run {cmd := "nearest", args := #[doc]}
+    logOutput out
+  | `(command| #leanaid_search $doc:str $n) =>
+    let doc := doc.getString
+    let n := n.getNat
+    let out ← IO.Process.run {cmd := "nearest", args := #[doc, toString n]}
+    logOutput out
+  | _ => throwUnsupportedSyntax
+  where logOutput (out : String) : CommandElabM Unit := do
+    match Json.parse out with
+    | Except.error err =>
+      logError "Could not parse JSON response from `nearest` command."
+      logError err
+    | Except.ok json =>
+      match json.getArr? with
+      | Except.error err => logError err
+      | Except.ok res =>
+        for triple in res do
+          match triple.getObjValAs? String "description" with
+          | Except.error err => logError err
+          | Except.ok doc =>
+            match triple.getObjValAs? String "theorem" with
+            | Except.error err => logError err
+            | Except.ok thm =>
+              match triple.getObjValAs? String "name" with
+              | Except.error err => logError err
+              | Except.ok name =>
+                logInfo s!"/-- {doc}-/\ntheorem {name}: {thm}\n\n"
