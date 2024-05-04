@@ -13,4 +13,6 @@ lean_exe «leanaidetools» where
 
 lean_exe nearest where
 
+lean_exe fetch where
+
 require aesop from git "https://github.com/JLimperg/aesop" @ "v4.7.0"

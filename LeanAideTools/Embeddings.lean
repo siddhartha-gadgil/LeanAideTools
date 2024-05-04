@@ -1,5 +1,5 @@
 import Lean
-import Lake.Build.Actions
+import Lean.Data.Json
 import Std.Util.Pickle
 open Lean Meta Elab Command
 
