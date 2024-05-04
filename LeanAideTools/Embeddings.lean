@@ -104,16 +104,16 @@ elab "#fetch_embeddings!" : command => do
   }
   logInfo "Fetched embeddings for search"
 
-syntax (name := leanaid_search) "#leanaid_search" str (num)? ";" : command
+syntax (name := leanaide_search) "#leanaide_search" str (num)? ";" : command
 
-@[command_elab leanaid_search]
+@[command_elab leanaide_search]
 unsafe def leanAideSearchElab : CommandElab := fun stx => do
   match stx with
-  | `(command| #leanaid_search $doc:str ;) =>
+  | `(command| #leanaide_search $doc:str ;) =>
     let doc := doc.getString
     let out ← IO.Process.run {cmd := "nearest_embeddings", args := #[doc]}
     logOutput out
-  | `(command| #leanaid_search $doc:str $n ;) =>
+  | `(command| #leanaide_search $doc:str $n ;) =>
     let doc := doc.getString
     let n := n.getNat
     let out ← IO.Process.run {cmd := "nearest_embeddings", args := #[doc, toString n]}
