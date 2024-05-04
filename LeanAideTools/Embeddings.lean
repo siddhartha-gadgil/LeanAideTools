@@ -85,21 +85,22 @@ elab "#setup_search" : command => do
   let picklePath ← picklePath
   if (← picklePath.pathExists) then
     logWarning m!"Embeddings already present at {picklePath}, use `#setup_search!` to redownload."
-  let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
-  logInfo s!"Redownloading embeddings to {url}"
-
-  let _ ←  IO.Process.run {
-    cmd := "curl"
-    args := #["-f", "-o", picklePath.toString, "-L", url]
-  }
-  logInfo "Fetched embeddings for search"
+  else
+    let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
+    logInfo m!"Downloading embeddings from {url}"
+    let _ ←  IO.Process.spawn {
+      cmd := "lake"
+      args := #["exe", "fetch"]
+    }
+    logInfo "Fetched embeddings for search"
 
 elab "#setup_search!" : command => do
   let picklePath ← picklePath
   let url := s!"https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
-  let _ ←  IO.Process.run {
-    cmd := "curl"
-    args := #[url, "--output", picklePath.toString]
+  logInfo m!"Downloading embeddings from {url}"
+  let _ ←  IO.Process.spawn {
+    cmd := "lake"
+    args := #["exe", "fetch", "-f"]
   }
   logInfo "Fetched embeddings for search"
 
@@ -110,12 +111,8 @@ unsafe def leanAideSearchElab : CommandElab := fun stx => do
 match stx with
 | `(command| #leanaid_search $doc:str) =>
   let doc := doc.getString
-  let picklePath ← picklePath
-  IO.println s!"Reading embeddings from {picklePath}"
-  withUnpickle  picklePath <|
-    fun (data : Array <| (String × String × Bool × String) ×  FloatArray) => do
-    let res ← findNearestEmbeddings data doc 5
-    res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
+  let out ← IO.Process.run {cmd := "nearest", args := #[doc]}
+  logInfo out
 | `(command| #leanaid_search $doc:str $n) =>
   let doc := doc.getString
   let picklePath ← picklePath
