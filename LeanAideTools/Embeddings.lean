@@ -96,6 +96,21 @@ elab "#setup_search!" : command => do
   let url := "https://math.iisc.ac.in/~gadgil/data/{picklePath.fileName.get!}"
   let _ ←  IO.Process.run {
     cmd := "curl"
-    args := #["-f", "-o", picklePath.toString, "-L", url]
+    args := #[url, "--output", picklePath.toString]
   }
   logInfo "Fetched embeddings for search"
+
+syntax (name := leanaid_search) "#leanaid_search" str (num)? : command
+
+@[command_elab leanaid_search]
+unsafe def leanAideSearchElab : CommandElab := fun stx => do
+match stx with
+| `(command| #leanaid_search $doc:str) =>
+  let doc := doc.getString
+  let res ← findNearestEmbeddings doc 5
+  res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
+| `(command| #leanaid_search $doc:str $n) =>
+  let doc := doc.getString
+  let res ← findNearestEmbeddings doc n.getNat
+  res.forM (fun (doc, thm, name) => logInfo s!"{doc} {thm} {name}")
+| _ => throwUnsupportedSyntax
