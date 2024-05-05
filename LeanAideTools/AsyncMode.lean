@@ -63,7 +63,7 @@ open Command
     return ()
   | _ => throwUnsupportedSyntax
 
-elab "#fail" tac:tactic : command => do
+elab "#fail_tactic" tac:tactic : command => do
   let tac := tac.raw.reprint.get!
   failTacticStringsIO.modify fun l => l  ++ [tac]
   return ()
