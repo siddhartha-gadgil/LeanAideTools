@@ -1,6 +1,6 @@
 import Lean
 import Lean.Data.Json
-import Std.Util.Pickle
+import Batteries.Util.Pickle
 open Lean Meta Elab Command
 
 def distL2Sq (v₁ : FloatArray) (v₂ : Array Float) : Float :=

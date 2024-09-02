@@ -18,7 +18,7 @@ lean_exe nearest_embeddings where
 lean_exe fetch_embeddings where
 
 
-require aesop from git "https://github.com/JLimperg/aesop" @ "v4.8.0-rc1"
+require aesop from git "https://github.com/JLimperg/aesop" @ "v4.11.0"
 
 def leanToolchain : IO String := do
   let inp ← IO.FS.readFile "lean-toolchain"
