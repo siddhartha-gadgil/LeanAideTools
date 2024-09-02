@@ -19,6 +19,7 @@ example : sillyN ≤ 3 := byy
   rw [silly]
   skip
   sleep 100
+  omega
 
 
 /--
@@ -32,9 +33,8 @@ example : sillyN ≤ 6 := byy
   rw [silly]
   sleep 200
 
-example : sillyN ≤ 7 := by
+example : sillyN ≤ 7 := byy
     rw [silly]
-    simp only [Nat.reduceLE]
 
 #autos [aesop, rw [Nat.succ]]
 
