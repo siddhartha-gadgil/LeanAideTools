@@ -19,6 +19,7 @@ example : sillyN ≤ 3 := byy
   rw [silly]
   skip
   sleep 100
+  try (sorry)
 
 
 /--
@@ -31,6 +32,7 @@ warning: declaration uses 'sorry'
 example : sillyN ≤ 6 := byy
   rw [silly]
   sleep 200
+  try(sorry)
 
 example : sillyN ≤ 7 := byy
     rw [silly]
