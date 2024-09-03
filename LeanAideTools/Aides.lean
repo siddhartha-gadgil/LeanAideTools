@@ -160,29 +160,6 @@ def getName? (stx: Syntax) : Option Name :=
   | `($n:ident) => some n.getId
   | _ => none
 
-
-def openAIKey : IO (Option String) := IO.getEnv "OPENAI_API_KEY"
-
-def azureKey : IO (Option String) := IO.getEnv "AZURE_OPENAI_KEY"
-
-def azureEndpoint : IO (Option String) := IO.getEnv "AZURE_OPENAI_ENDPOINT"
-
-def azureURL (deployment: String := "GPT4TestDeployment") : IO String := do
-  let endpoint ← azureEndpoint
-  match endpoint with
-  | none => throw <| IO.userError "AZURE_OPENAI_ENDPOINT not set"
-  | some endpoint =>
-    return s!"{endpoint}/openai/deployments/{deployment}/chat/completions?api-version=2023-05-15"
-
-def openAIURL : IO String := do
-  pure "https://api.openai.com/v1/chat/completions"
-
-def projectID : IO String := do
-  let id ← IO.getEnv "PROJECT_ID"
-  match id with
-  | none => throw <| IO.userError "PROJECT_ID not set"
-  | some id => return id
-
 open System IO.FS
 def appendFile (fname : FilePath) (content : String) : IO Unit := do
   let h ← Handle.mk fname Mode.append
