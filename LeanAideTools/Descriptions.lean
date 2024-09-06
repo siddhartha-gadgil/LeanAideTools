@@ -2,6 +2,7 @@ import LeanAideTools.Aides
 import LeanAideTools.ChatClient
 import Lean
 open Lean Meta Elab PrettyPrinter Parser
+set_option pp.fieldNotation false
 
 abbrev ContextTerm := TSyntax [`ident, `Lean.Parser.Term.hole, `Lean.Parser.Term.bracketedBinder]
 
@@ -11,6 +12,10 @@ partial def idents : Syntax → List String
 | Syntax.ident _ s .. => [s.toString]
 | Syntax.node _ _ ss => ss.toList.bind idents
 | _ => []
+
+def namesWithTail (tail: Name) : CoreM <| Array Name := do
+    let cnsts := (← getEnv).constants |>.map₁ |>.toArray |>.map (·.1)
+    return cnsts.filter fun n => n.componentsRev.head? == some tail
 
 open Lean.Parser.Term in
 partial def arrowHeads (type: Syntax.Term)
@@ -65,7 +70,7 @@ structure DefnTypes where
     docString? : Option String
     value : Option String
     statement : String
-    deriving Repr, ToJson, FromJson
+    deriving Repr, ToJson, FromJson, DecidableEq
 
 namespace DefnTypes
 def withDoc (dfn: DefnTypes) : String :=
@@ -83,7 +88,7 @@ def thmFromName? (name : Name) : MetaM <| Option DefnTypes := do
         let fmt ← Meta.ppExpr type
         let isProp := true
         let value := none
-        let typeStx ← PrettyPrinter.delab type
+        let typeStx ← delabCustom type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? isProp
@@ -105,8 +110,8 @@ def defFromName? (name : Name) : MetaM <| Option DefnTypes := do
         let isProp := false
         let value :=
             some <| (← Meta.ppExpr term).pretty
-        let typeStx ← PrettyPrinter.delab type
-        let valueStx ←  PrettyPrinter.delab term
+        let typeStx ← delabCustom type
+        let valueStx ←  delabCustom term
         let valueStx? := if isProp then none else some valueStx
         let statement ←
           mkStatement (some name) typeStx valueStx? isProp
@@ -115,6 +120,26 @@ def defFromName? (name : Name) : MetaM <| Option DefnTypes := do
 
 end DefnTypes
 
+def typeAndConsts (name: Name) : MetaM <|
+  Option (Expr × (Array Name) × List Name) := do
+  let env ← getEnv
+  let info? := env.find? name
+  match info? with
+    | some (.thmInfo dfn) =>
+        let type := dfn.type
+        let typeStx ← delabCustom type
+        let defNames := idents typeStx |>.eraseDups
+        let tails := defNames.filterMap fun n =>
+          let n := n.toName
+          n.componentsRev.head?
+        let constsInType := type.getUsedConstants
+        let dotNames := constsInType.toList.filter fun n =>
+          match n.componentsRev.head? with
+          | some t => tails.contains t
+          | none => false
+        return some (type, constsInType, dotNames)
+    | _ => return none
+
 def theoremAndDefs (name: Name) : MetaM <|
   Option (String × (List String)) := do
   let env ← getEnv
@@ -122,7 +147,7 @@ def theoremAndDefs (name: Name) : MetaM <|
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← PrettyPrinter.delab type
+        let typeStx ← delabCustom type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -131,13 +156,25 @@ def theoremAndDefs (name: Name) : MetaM <|
           | some doc => s!"/-- {doc} -/\n" ++ statement
           | none => statement
         let defNames := idents typeStx |>.eraseDups
+        let tails := defNames.filterMap fun n =>
+          let n := n.toName
+          n.componentsRev.head?
+        let constsInType := type.getUsedConstants
+        let dotNames := constsInType.toList.filter fun n =>
+          match n.componentsRev.head? with
+          | some t => tails.contains t
+          | none => false
         let defs ←  defNames.filterMapM <| fun n =>
           DefnTypes.defFromName? n.toName
+        let tailsDefs ← dotNames.filterMapM DefnTypes.defFromName?
+        let defs := defs ++ tailsDefs |>.eraseDups
         let defViews := defs.map <| fun df => df.withDoc
-        let defViews := defViews.filter fun df => df.length < 600
+        let defViews := defViews.filter fun df => df.length < 2000
         return some (statement, defViews)
     | _ => return none
 
+#check Name.components
+#check Expr.getUsedConstants
 
 def theoremStatement (name: Name) : MetaM <|
   Option (String) := do
@@ -146,7 +183,7 @@ def theoremStatement (name: Name) : MetaM <|
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← PrettyPrinter.delab type
+        let typeStx ← delabCustom type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -174,7 +211,7 @@ def theoremAndLemmas (name: Name)
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← PrettyPrinter.delab type
+        let typeStx ← delabCustom type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -193,7 +230,8 @@ def theoremAndLemmas (name: Name)
     | _ => return none
 
 def theoremPrompt (name: Name) : MetaM <| Option (String × String) := do
-  (← theoremAndDefs name).mapM fun (statement, dfns) =>
+  (← theoremAndDefs name).mapM fun (statement, dfns) => do
+    logInfo m!"Definitions: {dfns.length}"
     if dfns.isEmpty then
       return (← fromTemplate "describe_theorem" [("theorem", statement)], statement)
     else
@@ -211,4 +249,27 @@ def getDescriptionM (name: Name)(chatClient := ChatClient.openAI)(params: ChatPa
     let contents ← getMessageContents outJson
     return (contents[0]!, statement)
 
--- #eval getDescriptionM ``Nat.le_refl
+
+
+theorem imo_1959_p1
+    (n : Nat)
+    (h₀ : 0 < n) :
+    (21 * n + 4).gcd (14 * n + 3) = 1 := by sorry
+
+#eval theoremAndDefs ``imo_1959_p1
+#print imo_1959_p1
+
+#eval typeAndConsts ``imo_1959_p1
+
+-- #eval theoremPrompt ``imo_1959_p1
+
+-- #eval DefnTypes.defFromName? ``Nat.gcd
+
+/-
+some ("The theorem states that for any natural number \\( n \\) greater than 0, the greatest common divisor (gcd) of the numbers \\( 21n + 4 \\) and \\( 14n + 3 \\) is 1. In other words, \\( 21n + 4 \\) and \\( 14n + 3 \\) are coprime for all positive integers \\( n \\).",
+ "theorem imo_1959_p1 : ∀ (n : Nat), 0 < n → gcd (21 * n + 4) (14 * n + 3) = 1 := by sorry")
+
+-/
+-- #eval getDescriptionM ``imo_1959_p1
+
+#check Nat.gcd_div

@@ -272,3 +272,20 @@ def termKinds : MetaM <| SyntaxNodeKindSet :=  do
 def termKindList : MetaM <| List SyntaxNodeKind := do
     let s ← termKinds
     pure <| s.toList.map (·.1)
+
+open PrettyPrinter in
+def delabCustom (e : Expr) : MetaM Term := do
+  -- let myNatDecl : OpenDecl := .simple `MyNat []
+  let (stx, _) ←
+    delabCore e {} (
+    withOptions (fun o₁ =>
+                    let o₂ := pp.motives.all.set o₁ true
+                    let o₃ := pp.fieldNotation.set o₂ false
+                    let o₄ := pp.proofs.set o₃ true
+                    let o₅ := pp.deepTerms.set o₄ true
+                    let o₆ := pp.instantiateMVars.set o₅ true
+                    pp.unicode.fun.set o₆ true) <|
+                    -- withReader (fun c => {c with openDecls := [myNatDecl]} )
+                    do
+                      Delaborator.delab)
+  return stx
