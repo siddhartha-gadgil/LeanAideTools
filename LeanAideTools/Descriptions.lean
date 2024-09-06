@@ -88,7 +88,7 @@ def thmFromName? (name : Name) : MetaM <| Option DefnTypes := do
         let fmt ← Meta.ppExpr type
         let isProp := true
         let value := none
-        let typeStx ← delabCustom type
+        let typeStx ← delab type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? isProp
@@ -110,8 +110,8 @@ def defFromName? (name : Name) : MetaM <| Option DefnTypes := do
         let isProp := false
         let value :=
             some <| (← Meta.ppExpr term).pretty
-        let typeStx ← delabCustom type
-        let valueStx ←  delabCustom term
+        let typeStx ← delab type
+        let valueStx ←  delab term
         let valueStx? := if isProp then none else some valueStx
         let statement ←
           mkStatement (some name) typeStx valueStx? isProp
@@ -127,7 +127,7 @@ def typeAndConsts (name: Name) : MetaM <|
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← delabCustom type
+        let typeStx ← delab type
         let defNames := idents typeStx |>.eraseDups
         let tails := defNames.filterMap fun n =>
           let n := n.toName
@@ -141,7 +141,7 @@ def typeAndConsts (name: Name) : MetaM <|
     | _ => return none
 
 def defsInExpr (expr: Expr) : MetaM <| Array Name := do
-  let typeStx ← delabCustom expr
+  let typeStx ← delab expr
   let defNames := idents typeStx |>.eraseDups |>.map String.toName
   let tails := defNames.filterMap fun n =>
     n.componentsRev.head?
@@ -176,7 +176,7 @@ def theoremAndDefs (name: Name) : MetaM <|
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← delabCustom type
+        let typeStx ← delab type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -202,7 +202,7 @@ def theoremStatement (name: Name) : MetaM <|
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← delabCustom type
+        let typeStx ← delab type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -230,7 +230,7 @@ def theoremAndLemmas (name: Name)
   match info? with
     | some (.thmInfo dfn) =>
         let type := dfn.type
-        let typeStx ← delabCustom type
+        let typeStx ← delab type
         let valueStx? := none
         let statement ←
           mkStatement (some name) typeStx valueStx? true
@@ -281,6 +281,8 @@ theorem imo_1959_p1
 #eval typeAndConsts ``imo_1959_p1
 
 #eval theoremPrompt ``imo_1959_p1
+
+#eval DefnTypes.defFromName? ``Nat.gcd._unary
 
 /-
 some ("The theorem states that for any natural number \\( n \\) greater than 0, the greatest common divisor (gcd) of the numbers \\( 21n + 4 \\) and \\( 14n + 3 \\) is 1. In other words, \\( 21n + 4 \\) and \\( 14n + 3 \\) are coprime for all positive integers \\( n \\).",
