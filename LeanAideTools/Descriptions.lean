@@ -140,6 +140,35 @@ def typeAndConsts (name: Name) : MetaM <|
         return some (type, constsInType, dotNames)
     | _ => return none
 
+def defsInExpr (expr: Expr) : MetaM <| Array Name := do
+  let typeStx ← delabCustom expr
+  let defNames := idents typeStx |>.eraseDups |>.map String.toName
+  let tails := defNames.filterMap fun n =>
+    n.componentsRev.head?
+  let constsInType := expr.getUsedConstants
+  let dotNames := constsInType.filter fun n =>
+    match n.componentsRev.head? with
+    | some t => tails.contains t
+    | none => false
+  return dotNames
+
+def defsInTypeRec (name : Name) (type: Expr) (depth:Nat) :
+    MetaM <| Array Name := do
+  match depth with
+  | 0 => return #[name]
+  | k + 1 =>
+    let children ← defsInExpr type
+    let childrenTypes ← children.filterMapM fun n => do
+      let info ← getConstInfo n
+      pure <| some (n, info.type)
+    let childValueTypes ← children.filterMapM fun n => do
+      let info ← getConstInfo n
+      match info with
+      | ConstantInfo.defnInfo val => pure <| some (n, val.value)
+      | _ => return none
+    let res ← (childrenTypes ++ childValueTypes).mapM fun (n, t) => defsInTypeRec n t k
+    return res.foldl (· ++ ·) children |>.toList |>.eraseDups |>.toArray
+
 def theoremAndDefs (name: Name) : MetaM <|
   Option (String × (List String)) := do
   let env ← getEnv
@@ -155,22 +184,12 @@ def theoremAndDefs (name: Name) : MetaM <|
         let statement := match doc? with
           | some doc => s!"/-- {doc} -/\n" ++ statement
           | none => statement
-        let defNames := idents typeStx |>.eraseDups
-        let tails := defNames.filterMap fun n =>
-          let n := n.toName
-          n.componentsRev.head?
-        let constsInType := type.getUsedConstants
-        let dotNames := constsInType.toList.filter fun n =>
-          match n.componentsRev.head? with
-          | some t => tails.contains t
-          | none => false
+        let defNames ← defsInTypeRec name type 2
         let defs ←  defNames.filterMapM <| fun n =>
-          DefnTypes.defFromName? n.toName
-        let tailsDefs ← dotNames.filterMapM DefnTypes.defFromName?
-        let defs := defs ++ tailsDefs |>.eraseDups
+          DefnTypes.defFromName? n
         let defViews := defs.map <| fun df => df.withDoc
         let defViews := defViews.filter fun df => df.length < 2000
-        return some (statement, defViews)
+        return some (statement, defViews.toList)
     | _ => return none
 
 #check Name.components
@@ -261,9 +280,7 @@ theorem imo_1959_p1
 
 #eval typeAndConsts ``imo_1959_p1
 
--- #eval theoremPrompt ``imo_1959_p1
-
--- #eval DefnTypes.defFromName? ``Nat.gcd
+#eval theoremPrompt ``imo_1959_p1
 
 /-
 some ("The theorem states that for any natural number \\( n \\) greater than 0, the greatest common divisor (gcd) of the numbers \\( 21n + 4 \\) and \\( 14n + 3 \\) is 1. In other words, \\( 21n + 4 \\) and \\( 14n + 3 \\) are coprime for all positive integers \\( n \\).",
