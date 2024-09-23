@@ -148,7 +148,7 @@ def defsInExpr (expr: Expr) : MetaM <| Array Name := do
   let constsInType := expr.getUsedConstants
   let dotNames := constsInType.filter fun n =>
     match n.componentsRev.head? with
-    | some t => tails.contains t
+    | some t => tails.contains t || defNames.contains n
     | none => false
   return dotNames
 
@@ -276,6 +276,8 @@ theorem imo_1959_p1
     (21 * n + 4).gcd (14 * n + 3) = 1 := by sorry
 
 #eval theoremAndDefs ``imo_1959_p1
+#eval theoremAndDefs ``List.length_append
+
 #print imo_1959_p1
 
 #eval typeAndConsts ``imo_1959_p1
