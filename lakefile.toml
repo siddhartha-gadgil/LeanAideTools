@@ -1,5 +1,6 @@
 name = "LeanAideTools"
 defaultTargets = ["leanaidetools"]
+testDriver="LeanAideToolsTest"
 
 [[lean_lib]]
 name = "LeanAideTools"
@@ -7,3 +8,6 @@ name = "LeanAideTools"
 [[lean_exe]]
 name = "leanaidetools"
 root = "Main"
+
+[[lean_lib]]
+name = "LeanAideToolsTest"

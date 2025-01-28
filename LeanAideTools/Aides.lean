@@ -3,7 +3,6 @@ import Lean.Meta
 import Lean.Elab
 import Lean.Parser
 import Lean.Parser.Extension
-import Batteries.Data.List.Basic
 
 open Lean Meta Elab Parser Tactic
 
@@ -174,15 +173,6 @@ def gitHash : IO String := do
   let hash ← IO.Process.output { cmd := "git", args := #["rev-parse", "--short", "HEAD"] }
   return hash.stdout.trim
 
-def colEqSegments (s: String) : List String :=
-  let pieces := s.splitOn ":="
-  match pieces with
-  | [] => []
-  | head :: tail =>
-    tail.scanl (fun acc x => acc ++ ":=" ++ x) head |>.map (String.trim)
-
-def splitColEqSegments (ss: Array String) : Array String :=
-  ss.toList.bind colEqSegments |>.toArray
 
 def trivialEquality : Syntax → CoreM Bool
   | `($a = $b) => return a == b
