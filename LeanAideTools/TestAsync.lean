@@ -38,7 +38,7 @@ example : sillyN ≤ 7 := byy
     rw [silly]
     sleep 200
 
-#autos [aesop, rw [Nat.succ]]
+#autos [simp?, rw [Nat.succ]]
 
 #auto (sleep 300; simp [silly])
 

@@ -1,0 +1,9 @@
+name = "LeanAideTools"
+defaultTargets = ["leanaidetools"]
+
+[[lean_lib]]
+name = "LeanAideTools"
+
+[[lean_exe]]
+name = "leanaidetools"
+root = "Main"

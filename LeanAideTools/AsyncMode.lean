@@ -1,7 +1,6 @@
 import Lean
 import Lean.Elab.Tactic
 import Lean.Meta.Tactic.TryThis
-import Aesop
 import LeanAideTools.Basic
 import LeanAideTools.InstanceClash
 
@@ -37,7 +36,7 @@ We have a function of type `TacticM Unit` which
 -/
 
 initialize autoTacticStringsIO : IO.Ref (List String) ←
-  IO.mkRef ["rfl", "simp?", "omega", "aesop?", "exact?"]
+  IO.mkRef ["rfl", "simp?", "omega", "exact?"]
 
 initialize failTacticStringsIO : IO.Ref (List String) ←
   IO.mkRef ["check_clashes"]
