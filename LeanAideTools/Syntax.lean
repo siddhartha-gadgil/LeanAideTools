@@ -72,6 +72,7 @@ syntax (name := defCommand) "#def"  str : command
         checkResult js
         let some stx'' := runParserCategory (← getEnv) `command dfn |>.toOption | throwError s!"Could not parse {dfn}.\nMaybe some imports are missing"
         let cmd : Syntax.Command := ⟨stx''⟩
+        TryThis.addSuggestion stx cmd
         let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (s ++ " -/")]
         match cmd with
         | `(command| def $name $args* : $stx' := $val) =>
@@ -88,6 +89,47 @@ syntax (name := defCommand) "#def"  str : command
         throwError s!"No definition in server response: {e}"
     else
       logWarning "To translate a theorem, end the string with a `.`."
+
+syntax (name:= addDocs) "#doc" command : command
+
+open Command in
+@[command_elab addDocs] def elabAddDocsImpl : CommandElab := fun stx =>
+  match stx with
+  | `(#doc theorem $id:ident $ty:declSig $val:declVal) =>
+    Command.liftTermElabM do
+    let name := id.getId
+    let stx' ← `(command| theorem $id:ident $ty $val)
+    let fmt ← PrettyPrinter.ppCommand stx'
+    let js ← theoremDoc fmt.pretty name.toString
+    let some desc :=
+      js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
+    let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
+    let stx' ← `(command| $docs:docComment theorem $id:ident $ty $val)
+    TryThis.addSuggestion stx stx'
+  | `(#doc def $id:ident $args* : $ty:term := $val:term) =>
+    Command.liftTermElabM do
+    let name := id.getId
+    let stx' ← `(command| def $id:ident $args* : $ty:term := $val:term)
+    let fmt ← PrettyPrinter.ppCommand stx'
+    let js ← defDoc fmt.pretty name.toString
+    let some desc :=
+      js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
+    let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
+    let stx' ← `(command| $docs:docComment def $id:ident $args* : $ty:term := $val:term)
+    TryThis.addSuggestion stx stx'
+  | `(#doc noncomputable def $id:ident $args* : $ty:term := $val:term) =>
+    Command.liftTermElabM do
+    let name := id.getId
+    let stx' ← `(command| noncomputable def $id:ident $args* : $ty:term := $val:term)
+    let fmt ← PrettyPrinter.ppCommand stx'
+    let js ← defDoc fmt.pretty name.toString
+    let some desc :=
+      js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
+    let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
+    let stx' ← `(command| $docs:docComment noncomputable def $id:ident $args* : $ty:term := $val:term)
+    TryThis.addSuggestion stx stx'
+  | _ => throwError "unexpected syntax"
+
 
 
 #theorem "There are infinitely many natural numbers"
