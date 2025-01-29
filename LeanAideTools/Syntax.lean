@@ -30,11 +30,13 @@ syntax (name := thmCommand) "#theorem" (ident)? (":")? str : command
       let name ← match name? with
       | some name => pure name
       | none =>
-          pure Name.anonymous
+          let js ← theoremName s
+          let some name := js.getObjValAs? Name "name" |>.toOption | throwError "Could not obtain name"
+          pure name
       let name := mkIdent name
       match js.getObjValAs? String "theorem" with
       | Except.ok thm =>
-        let stx'' := runParserCategory (← getEnv) `term thm |>.toOption.get!
+        let some stx'' := runParserCategory (← getEnv) `term thm |>.toOption | throwError s!"Could not parse {thm}.\nMaybe some imports are missing"
         let stx' : Syntax.Term := ⟨stx''⟩
         let cmd ← `(command| theorem $name : $stx' := by sorry)
         TryThis.addSuggestion stx cmd
@@ -52,3 +54,5 @@ syntax (name := thmCommand) "#theorem" (ident)? (":")? str : command
 
     else
       logWarning "To translate a theorem, end the string with a `.`."
+
+-- #theorem "There are infinitely many natural numbers."

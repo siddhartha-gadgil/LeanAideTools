@@ -38,6 +38,10 @@ def defDoc (cmd name: String) (url: String := "http://localhost:7654") : IO Json
   let js := Json.mkObj [("task", "def_doc"), ("name", name), ("command", cmd)]
   callLeanAide js url
 
+def theoremName (text: String) (url: String := "http://localhost:7654") : IO Json := do
+  let js := Json.mkObj [("task", "theorem_name"), ("text", text)]
+  callLeanAide js url
+
 -- #eval translateTheorem "There are infinitely many prime numbers."
 
 -- #eval defDoc "def isCube (n: Nat) : Prop := ∃ m, m * m * m = n" "isCube"
