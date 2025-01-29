@@ -42,6 +42,17 @@ def theoremName (text: String) (url: String := "http://localhost:7654") : IO Jso
   let js := Json.mkObj [("task", "theorem_name"), ("text", text)]
   callLeanAide js url
 
+def checkResult (js: Json) : CoreM Unit := do
+  match js.getObjValAs? String "result" with
+  | Except.ok "error" =>
+    let error := js.getObjValAs? String "error" |>.toOption |>.getD "internal error"
+    throwError s!"Error in LeanAide server: {error}.S"
+  | Except.ok "fallback" =>
+      logInfo "No valid response found, suggesting best option."
+  | Except.ok "success" => pure ()
+  | Except.error e => throwError s!"Error in LeanAide server: {e}."
+  | Except.ok _ => throwError "Unexpected result from LeanAide server."
+
 -- #eval translateTheorem "There are infinitely many prime numbers."
 
 -- #eval defDoc "def isCube (n: Nat) : Prop := ∃ m, m * m * m = n" "isCube"
