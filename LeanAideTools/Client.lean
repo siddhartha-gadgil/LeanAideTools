@@ -12,7 +12,7 @@ register_option leanaide.url : String := {
 def leanaideUrl : CoreM String := do
   return leanaide.url.get (← getOptions)
 
-def callLeanAide (data: Json) (url: String := "http://localhost:7654") : IO <| Json := do
+def callLeanAide (data: Json) (url: String ) : IO <| Json := do
   let out ←
     IO.Process.output
       {cmd:= "curl", args:=#["-X", "POST", "-H", "\"Content-Type: application/json\"", "-d", data.compress, url]}
@@ -22,23 +22,23 @@ def callLeanAide (data: Json) (url: String := "http://localhost:7654") : IO <| J
     IO.throwServerError s!"Error parsing server output as Json:{e}; output: {out.stdout}"
   | Except.ok js => return js
 
-def translateTheorem (s: String) (url: String := "http://localhost:7654") : IO Json := do
+def translateTheorem (s: String) (url: String ) : IO Json := do
   let js := Json.mkObj [("task", "translate_thm"), ("text", s)]
   callLeanAide js url
 
-def translateDef (s: String) (url: String := "http://localhost:7654") : IO Json := do
+def translateDef (s: String) (url: String ) : IO Json := do
   let js := Json.mkObj [("task", "translate_def"), ("text", s)]
   callLeanAide js url
 
-def theoremDoc (cmd name: String) (url: String := "http://localhost:7654") : IO Json := do
+def theoremDoc (cmd name: String) (url: String ) : IO Json := do
   let js := Json.mkObj [("task", "theorem_doc"), ("name", name), ("command", cmd)]
   callLeanAide js url
 
-def defDoc (cmd name: String) (url: String := "http://localhost:7654") : IO Json := do
+def defDoc (cmd name: String) (url: String ) : IO Json := do
   let js := Json.mkObj [("task", "def_doc"), ("name", name), ("command", cmd)]
   callLeanAide js url
 
-def theoremName (text: String) (url: String := "http://localhost:7654") : IO Json := do
+def theoremName (text: String) (url: String ) : IO Json := do
   let js := Json.mkObj [("task", "theorem_name"), ("text", text)]
   callLeanAide js url
 

@@ -26,11 +26,11 @@ syntax (name := thmCommand) "#theorem" (ident)? (":")? str : command
   | _ => throwUnsupportedSyntax
   where go (s: String) (stx: Syntax) (name? : Option Name) : TermElabM Unit := do
     if s.endsWith "." then
-      let js ← translateTheorem s
+      let js ← translateTheorem s (← leanaideUrl)
       let name ← match name? with
       | some name => pure name
       | none =>
-          let js ← theoremName s
+          let js ← theoremName s (← leanaideUrl)
           let some name := js.getObjValAs? Name "name" |>.toOption | throwError "Could not obtain name"
           pure name
       let name := mkIdent name
@@ -66,7 +66,7 @@ syntax (name := defCommand) "#def"  str : command
   | _ => throwUnsupportedSyntax
   where go (s: String) (stx: Syntax) : TermElabM Unit := do
     if s.endsWith "." then
-      let js ← translateDef s
+      let js ← translateDef s (← leanaideUrl)
       match js.getObjValAs? String "definition" with
       | Except.ok dfn =>
         checkResult js
@@ -100,7 +100,7 @@ open Command in
     let name := id.getId
     let stx' ← `(command| theorem $id:ident $ty $val)
     let fmt ← PrettyPrinter.ppCommand stx'
-    let js ← theoremDoc fmt.pretty name.toString
+    let js ← theoremDoc fmt.pretty name.toString (← leanaideUrl)
     let some desc :=
       js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
     let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
@@ -111,7 +111,7 @@ open Command in
     let name := id.getId
     let stx' ← `(command| def $id:ident $args* : $ty:term := $val:term)
     let fmt ← PrettyPrinter.ppCommand stx'
-    let js ← defDoc fmt.pretty name.toString
+    let js ← defDoc fmt.pretty name.toString (← leanaideUrl)
     let some desc :=
       js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
     let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
@@ -122,15 +122,13 @@ open Command in
     let name := id.getId
     let stx' ← `(command| noncomputable def $id:ident $args* : $ty:term := $val:term)
     let fmt ← PrettyPrinter.ppCommand stx'
-    let js ← defDoc fmt.pretty name.toString
+    let js ← defDoc fmt.pretty name.toString (← leanaideUrl)
     let some desc :=
       js.getObjValAs? String "doc" |>.toOption | throwError "No description found"
     let docs := mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (desc ++ " -/")]
     let stx' ← `(command| $docs:docComment noncomputable def $id:ident $args* : $ty:term := $val:term)
     TryThis.addSuggestion stx stx'
   | _ => throwError "unexpected syntax"
-
-
 
 #theorem "There are infinitely many natural numbers"
 
