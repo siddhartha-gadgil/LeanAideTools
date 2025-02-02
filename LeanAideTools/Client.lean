@@ -196,6 +196,24 @@ def checkResult (js: Json) : CoreM Unit := do
 
 -- #eval translateTheorem "There are infinitely many prime numbers."
 
--- #eval defDoc "def isCube (n: Nat) : Prop := ∃ m, m * m * m = n" "isCube"
+-- #eval defDoc "def isCube (n: Nat) : Prop := ∃ m, m * m * m = n" "isCube" (url :="http://localhost:7654")
+
+def getCodeJson (thm: String) (url: String) (elaborate: Bool := true) : CoreM Json := do
+  let tasks := ["prove", "structured_json_proof", "lean_from_json_structured"]
+  let tasks := if elaborate then tasks ++ ["elaborate"] else tasks
+  let js := Json.mkObj [("tasks", toJson tasks), ("theorem", thm)]
+  callLeanAide js url
+
+def getLeanCode (thm: String) (url: String) (elaborate: Bool := true) : CoreM Syntax.Command := do
+  let js ← getCodeJson thm url elaborate
+  checkResult js
+  match js.getObjValAs? String "lean_code" with
+  | Except.ok lean =>
+    let lean := lean.replace "\\n" "\n"
+    let parsed? := Parser.runParserCategory (← getEnv) `command lean
+    match parsed? with
+    | Except.ok stx => return ⟨stx⟩
+    | _ => throwError s!"Could not parse {lean}.\nMaybe some imports are missing"
+  | Except.error e => throwError s!"Error in LeanAide server: {e}."
 
 end LeanAideTools

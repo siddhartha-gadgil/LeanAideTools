@@ -130,6 +130,22 @@ open Command in
     TryThis.addSuggestion stx stx'
   | _ => throwError "unexpected syntax"
 
+syntax (name := proveCommand) "#prove"  str : command
+@[command_elab proveCommand] def proveCommandImpl : CommandElab :=
+  fun stx => Command.liftTermElabM do
+  match stx with
+  | `(command| #prove $s:str) =>
+    let s := s.getString
+    go s stx
+  | _ => throwUnsupportedSyntax
+  where go (s: String) (stx: Syntax) : TermElabM Unit := do
+    if s.endsWith "." then
+      let code ← getLeanCode s (← leanaideUrl)
+      TryThis.addSuggestion stx code
+    else
+      logWarning "To translate a theorem, end the string with a `.`."
+
+
 #theorem "There are infinitely many natural numbers"
 
 #def "A number is defined to be cube-free if it is not divisible by the cube of a prime number"
