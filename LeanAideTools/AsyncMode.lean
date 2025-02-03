@@ -3,6 +3,7 @@ import Lean.Elab.Tactic
 import Lean.Meta.Tactic.TryThis
 import LeanAideTools.Basic
 import LeanAideTools.InstanceClash
+import LeanAideTools.Aides
 
 open Lean Meta Elab Term Tactic Core Parser Tactic
 open Std.Tactic
@@ -93,11 +94,6 @@ def runFailTactics : TacticM Unit :=
         catch e =>
           logError m!"Error in fail tactic {failTactic}: {e.toMessageData}"
 
-def getTactics (tacSeq : TSyntax ``tacticSeq) : Array (TSyntax `tactic) :=
-  match tacSeq with
-  | `(tacticSeq| { $[ $tacs ]* }) => tacs
-  | `(tacticSeq| $[ $tacs ]*) => tacs
-  | _ => #[]
 
 def concatTactics (s : TSyntax ``tacticSeq) (h: TSyntax `tactic):
   CoreM (TSyntax ``tacticSeq) := do
@@ -119,26 +115,6 @@ def concatTactics' (s? : Option (TSyntax ``tacticSeq))
   match s? with
   | some s => concatTactics s h
   | none => tacAsSeq h
-
-def appendTactics' (ts : Array (TSyntax `tactic))
-    (s : TSyntax ``tacticSeq) :
-  MetaM (TSyntax ``tacticSeq) := do
-  match s with
-  | `(tacticSeq| { $[$t]* }) =>
-      let ts' := ts ++ t
-      `(tacticSeq| { $[$ts']* })
-  | `(tacticSeq| $[$t]*) =>
-      let ts' := ts ++ t
-      `(tacticSeq| $[$ts']*)
-  | _ => `(tacticSeq| $[$ts]*)
-
-def EIO.runToIO' (eio: EIO Exception α) : IO α  := do
-  match ←  eio.toIO' with
-  | Except.ok x =>
-      pure x
-  | Except.error e =>
-      let msg ← e.toMessageData.toString
-      IO.throwServerError msg
 
 register_option leanaide.auto_tactic.delay : Nat :=
   { defValue := 50
