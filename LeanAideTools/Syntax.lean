@@ -145,6 +145,16 @@ syntax (name := proveCommand) "#prove"  str : command
     else
       logWarning "To translate a theorem, end the string with a `.`."
 
+syntax (name := provePropCommand) "#prove"  term ":=" : command
+@[command_elab provePropCommand] def provePropCommandImpl : CommandElab :=
+  fun stx => Command.liftTermElabM do
+  match stx with
+  | `(command| #prove $t:term :=) =>
+    go t stx
+  | _ => throwUnsupportedSyntax
+  where go (t: Syntax.Term) (stx: Syntax) : TermElabM Unit := do
+    let code ← getPropLeanCodeStx t (← leanaideUrl)
+    TryThis.addSuggestion stx code
 
 #theorem "There are infinitely many natural numbers"
 

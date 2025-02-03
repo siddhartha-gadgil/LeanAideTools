@@ -225,7 +225,7 @@ def partialParser  (parser : Parser) (input : String) (fileName := "<input>") : 
     return Except.error (s.toErrorMsg ictx)
   else
     let head := input.extract 0 s.pos
-    let stx := stack.back
+    let stx := stack.back!
     return Except.ok (stx, head, input.drop head.length)
 
 partial def polyParser (parser: Parser) (input: String) (fileName := "<input>") : MetaM <| Option  Syntax := do
@@ -279,3 +279,16 @@ def delabCustom (e : Expr) : MetaM Term := do
                     do
                       Delaborator.delab)
   return stx
+
+def ppExprDetailed (e : Expr): MetaM String := do
+  let fmtDetailed ← withOptions (fun o₁ =>
+                    let o₂ := pp.motives.all.set o₁ true
+                    let o₃ := pp.fieldNotation.set o₂ false
+                    let o₄ := pp.proofs.set o₃ true
+                    let o₅ := pp.deepTerms.set o₄ true
+                    let o₆ := pp.funBinderTypes.set o₅ true
+                    let o₇ := pp.piBinderTypes.set o₆ true
+                    let o₈ := pp.letVarTypes.set o₇ true
+                    pp.unicode.fun.set o₈ true) do
+    ppExpr e
+  return fmtDetailed.pretty

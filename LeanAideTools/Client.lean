@@ -1,4 +1,5 @@
 import Lean
+import LeanAideTools.Aides
 open Lean
 
 namespace LeanAideTools
@@ -215,5 +216,32 @@ def getLeanCode (thm: String) (url: String) (elaborate: Bool := true) : CoreM Sy
     | Except.ok stx => return ⟨stx⟩
     | _ => throwError s!"Could not parse {lean}.\nMaybe some imports are missing"
   | Except.error e => throwError s!"Error in LeanAide server: {e}."
+
+def getPropCodeJson (prop : String) (url: String) (elaborate: Bool := true) : MetaM Json := do
+  let tasks := ["prove_prop", "structured_json_proof", "lean_from_json_structured"]
+  let tasks := if elaborate then tasks ++ ["elaborate"] else tasks
+  let js := Json.mkObj [("tasks", toJson tasks), ("prop", prop)]
+  callLeanAide js url
+
+def getPropLeanCode (prop: String) (url: String) (elaborate: Bool := true) : MetaM Syntax.Command := do
+  let js ← getPropCodeJson prop url elaborate
+  checkResult js
+  match js.getObjValAs? String "lean_code" with
+  | Except.ok lean =>
+    let lean := lean.replace "\\n" "\n"
+    let parsed? := Parser.runParserCategory (← getEnv) `command lean
+    match parsed? with
+    | Except.ok stx => return ⟨stx⟩
+    | _ => throwError s!"Could not parse {lean}.\nMaybe some imports are missing"
+  | Except.error e => throwError s!"Error in LeanAide server: {e}."
+
+def getPropLeanCodeExpr (type: Expr) (url: String) (elaborate: Bool := true) : MetaM Syntax.Command := do
+  let prop ← ppExprDetailed type
+  getPropLeanCode prop url elaborate
+
+def getPropLeanCodeStx (type: Syntax.Term) (url: String) (elaborate: Bool := true) : MetaM Syntax.Command := do
+  let prop ← PrettyPrinter.ppTerm type
+  let prop := prop.pretty
+  getPropLeanCode prop url elaborate
 
 end LeanAideTools
