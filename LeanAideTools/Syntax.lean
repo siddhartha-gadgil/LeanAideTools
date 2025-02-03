@@ -156,6 +156,27 @@ syntax (name := provePropCommand) "#prove"  term ":=" : command
     let code ← getPropLeanCodeStx t (← leanaideUrl)
     TryThis.addSuggestion stx code
 
+syntax (name := proveTactic) "#prove" : tactic
+@[tactic proveTactic] def proveTacticImpl : Tactic :=  fun stx =>
+    withMainContext do
+      let decls := (← getLCtx).decls.toList |>.filterMap id
+      let decls:= decls.filter
+        fun decl => !(decl.isImplementationDetail || decl.isLet)
+      let names := decls.map fun decl => decl.userName
+      logInfo m!"Variables: {names}"
+      let type ← withoutModifyingState do
+        let goalVar ← getMainGoal
+        let goalVar ← goalVar.revertAll
+        goalVar.getType
+      -- let goalVar ← (← getMainGoal).revertAll
+      -- logInfo <| ←  goalVar.getType
+      logInfo m!"Type: {type}"
+      let code ← getPropLeanCodeExpr type (← leanaideUrl)
+      let tacs ← theoremToTactics code names
+      let tacticSeq ← `(tacticSeq| $tacs*)
+      TryThis.addSuggestion stx tacticSeq
+      return
+
 #theorem "There are infinitely many natural numbers"
 
 #def "A number is defined to be cube-free if it is not divisible by the cube of a prime number"

@@ -292,3 +292,21 @@ def ppExprDetailed (e : Expr): MetaM String := do
                     pp.unicode.fun.set o₈ true) do
     ppExpr e
   return fmtDetailed.pretty
+
+def theoremToTactics (stx: Syntax.Command)(vars: List Name) :
+    MetaM (Array Syntax.Tactic) := do
+  match stx with
+  | `(command| theorem $name:ident : $type := $val) =>
+    let haveTac ← `(tactic| have $name : $type := $val)
+    let mut varTerms : Array Syntax.Term := #[]
+    for var in vars do
+      if var.isInternal then
+        varTerms := varTerms.push (← `(_))
+      else
+        let ident := mkIdent var
+        varTerms := varTerms.push (← `($ident))
+    let exactTac ← `(tactic| exact $name $varTerms*)
+    return #[haveTac, exactTac]
+  | _ => throwError s!"Could not make tactics from {← PrettyPrinter.ppCommand stx}; expected theorem"
+
+#check Lean.Parser.Term.letIdBinder
