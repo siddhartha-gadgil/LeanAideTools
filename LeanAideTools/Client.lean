@@ -10,129 +10,129 @@ register_option leanaide.url : String := {
   group := "leanaide"
 }
 
-register_option lean_aide.examples.docstrings : Nat :=
+register_option leanaide.examples.docstrings : Nat :=
   { defValue := 10
-    group := "lean_aide"
+    group := "leanaide"
     descr := "Number of document strings in a prompt (default 10)" }
 
-register_option lean_aide.examples.concise_descriptions : Nat :=
+register_option leanaide.examples.concise_descriptions : Nat :=
   { defValue := 0
-    group := "lean_aide"
+    group := "leanaide"
     descr := "Number of concise descriptions in a prompt (default 0)" }
 
-register_option lean_aide.examples.descriptions : Nat :=
+register_option leanaide.examples.descriptions : Nat :=
   { defValue := 0
-    group := "lean_aide"
+    group := "leanaide"
     descr := "Number of descriptions in a prompt (default 0)" }
 
-register_option lean_aide.custom : Bool :=
+register_option leanaide.custom : Bool :=
   { defValue := false
-    group := "lean_aide"
+    group := "leanaide"
     descr := "Whether to use custom model or parameters." }
 
-register_option lean_aide.examples.custom : Bool :=
+register_option leanaide.examples.custom : Bool :=
   { defValue := false
-    group := "lean_aide"
+    group := "leanaide"
     descr := "Whether to customize examples." }
 
-register_option lean_aide.query.choices : Nat :=
+register_option leanaide.query.choices : Nat :=
   { defValue := 10
     group := "leanaide"
     descr := "Number of outputs to request in a query (default 5)." }
 
-register_option lean_aide.query.model : String :=
+register_option leanaide.query.model : String :=
   { defValue := "gpt-4o"
     group := "leanaide"
     descr := "Model to use (gpt-4o)." }
 
-register_option lean_aide.query.azure : Bool :=
+register_option leanaide.query.azure : Bool :=
   { defValue := false
     group := "leanaide"
     descr := "Whether to use Azure OpenAI." }
 
-register_option lean_aide.query.gemini : Bool :=
+register_option leanaide.query.gemini : Bool :=
   { defValue := false
     group := "leanaide"
     descr := "Whether using the gemini API." }
 
-register_option lean_aide.query.url? : String :=
+register_option leanaide.query.url? : String :=
   { defValue := ""
     group := "leanaide"
     descr := "Local or generic url to query. Empty string for none" }
 
-register_option lean_aide.query.authkey? : String :=
+register_option leanaide.query.authkey? : String :=
   { defValue := ""
     group := "leanaide"
     descr := "Authentication key for OpenAI or generic model" }
 
-register_option lean_aide.query.examples_url? : String :=
+register_option leanaide.query.examples_url? : String :=
   { defValue := ""
     group := "leanaide"
     descr := "Local or generic url to query for embeddings. Empty string for none" }
 
-register_option lean_aide.query.greedy : Bool :=
+register_option leanaide.query.greedy : Bool :=
   { defValue := false
     group := "leanaide"
     descr := "Whether to choose the first elaboration." }
 
-register_option lean_aide.query.reasoning : Bool :=
+register_option leanaide.query.reasoning : Bool :=
   { defValue := false
     group := "leanaide"
     descr := "Whether using a reasoning model." }
 
-register_option lean_aide.query.has_sysprompt : Bool :=
+register_option leanaide.query.has_sysprompt : Bool :=
   { defValue := true
     group := "leanaide"
     descr := "Whether the server has a system prompt." }
 
-register_option lean_aide.query.temperature10 : Nat :=
+register_option leanaide.query.temperature10 : Nat :=
   { defValue := 8
     group := "leanaide"
     descr := "temperature * 10." }
 
-register_option lean_aide.query.max_tokens : Nat :=
+register_option leanaide.query.max_tokens : Nat :=
   { defValue := 1600
     group := "leanaide"
     descr := "Maximum tokens to generate." }
 
 def config : CoreM Json := do
   let opts ← getOptions
-  if lean_aide.custom.get opts then
-    let url := lean_aide.query.url?.get opts
+  if leanaide.custom.get opts then
+    let url := leanaide.query.url?.get opts
     let url? := if url == "" then none else some url
-    let authkey? := if lean_aide.query.authkey?.get opts == "" then none else some (lean_aide.query.authkey?.get opts)
+    let authkey? := if leanaide.query.authkey?.get opts == "" then none else some (leanaide.query.authkey?.get opts)
     let temp  :=
     match JsonNumber.fromFloat? <|
-      (Float.ofNat <| lean_aide.query.temperature10.get opts)/10 with
+      (Float.ofNat <| leanaide.query.temperature10.get opts)/10 with
       | .inr temp => temp
       | _ => 1.0
     let server :=
       Json.mkObj [
-        ("model", Json.str <| lean_aide.query.model.get opts),
-        ("gemini", Json.bool <| lean_aide.query.gemini.get opts),
-        ("azure", Json.bool <| lean_aide.query.azure.get opts),
-        ("authkey", Json.str <| lean_aide.query.authkey?.get opts),
-        ("examples_url", Json.str <| lean_aide.query.examples_url?.get opts),
-        ("greedy", Json.bool <| lean_aide.query.greedy.get opts),
-        ("reasoning", Json.bool <| lean_aide.query.reasoning.get opts),
-        ("has_sysprompt", Json.bool <| lean_aide.query.has_sysprompt.get opts),
+        ("model", Json.str <| leanaide.query.model.get opts),
+        ("gemini", Json.bool <| leanaide.query.gemini.get opts),
+        ("azure", Json.bool <| leanaide.query.azure.get opts),
+        ("greedy", Json.bool <| leanaide.query.greedy.get opts),
+        ("reasoning", Json.bool <| leanaide.query.reasoning.get opts),
+        ("has_sysprompt", Json.bool <| leanaide.query.has_sysprompt.get opts),
         ("temperature", Json.num  <| temp),
-        ("max_tokens", Json.num <| JsonNumber.fromNat <| lean_aide.query.max_tokens.get opts),
+        ("max_tokens", Json.num <| JsonNumber.fromNat <| leanaide.query.max_tokens.get opts),
         ]
     let server := match url? with
     | some url => server.mergeObj <| Json.mkObj [("url", Json.str url)]
     | none => server
     let response := Json.mkObj [("server", server)]
-    let response := match authkey? with
-    | some authkey => response.mergeObj <| Json.mkObj [("auth_key", Json.str authkey)]
-    | none => response
-    let response := if lean_aide.examples.custom.get opts then
+    let response ←  match authkey? with
+    | some authkey => do
+      logInfo m!"Using authkey {authkey}"
+      pure <|response.mergeObj <| Json.mkObj [("auth_key", Json.str authkey)]
+    | none => pure response
+    let response := if leanaide.examples.custom.get opts then
       let examples := Json.mkObj [
-        ("docstrings", Json.num <| JsonNumber.fromNat <| lean_aide.examples.docstrings.get opts),
-        ("concise_descriptions", Json.num <| JsonNumber.fromNat <| lean_aide.examples.concise_descriptions.get opts),
-        ("descriptions", Json.num <| JsonNumber.fromNat <| lean_aide.examples.descriptions.get opts),
+        ("docstrings", Json.num <| JsonNumber.fromNat <| leanaide.examples.docstrings.get opts),
+        ("concise_descriptions", Json.num <| JsonNumber.fromNat <| leanaide.examples.concise_descriptions.get opts),
+        ("descriptions", Json.num <| JsonNumber.fromNat <| leanaide.examples.descriptions.get opts),
         ]
-      let examples_url := lean_aide.query.examples_url?.get opts
+      let examples_url := leanaide.query.examples_url?.get opts
       let examples_url? := if examples_url == "" then none else some examples_url
       let examples := match examples_url? with
       | some url => examples.mergeObj <| Json.mkObj [("examples_url", Json.str url)]
@@ -142,7 +142,7 @@ def config : CoreM Json := do
       response
     return response
   else
-    let authkey := lean_aide.query.authkey?.get opts
+    let authkey := leanaide.query.authkey?.get opts
     let authkey := if authkey == "" then none else some authkey
     match authkey with
     | some authkey => return Json.mkObj [("auth_key", Json.str authkey)]
