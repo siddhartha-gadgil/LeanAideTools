@@ -65,7 +65,7 @@ register_option lean_aide.query.authkey? : String :=
     group := "leanaide"
     descr := "Authentication key for OpenAI or generic model" }
 
-register_option lean_aide.query.embed_url? : String :=
+register_option lean_aide.query.examples_url? : String :=
   { defValue := ""
     group := "leanaide"
     descr := "Local or generic url to query for embeddings. Empty string for none" }
@@ -112,7 +112,7 @@ def config : CoreM Json := do
         ("gemini", Json.bool <| lean_aide.query.gemini.get opts),
         ("azure", Json.bool <| lean_aide.query.azure.get opts),
         ("authkey", Json.str <| lean_aide.query.authkey?.get opts),
-        ("embed_url", Json.str <| lean_aide.query.embed_url?.get opts),
+        ("examples_url", Json.str <| lean_aide.query.examples_url?.get opts),
         ("greedy", Json.bool <| lean_aide.query.greedy.get opts),
         ("reasoning", Json.bool <| lean_aide.query.reasoning.get opts),
         ("has_sysprompt", Json.bool <| lean_aide.query.has_sysprompt.get opts),
@@ -132,10 +132,10 @@ def config : CoreM Json := do
         ("concise_descriptions", Json.num <| JsonNumber.fromNat <| lean_aide.examples.concise_descriptions.get opts),
         ("descriptions", Json.num <| JsonNumber.fromNat <| lean_aide.examples.descriptions.get opts),
         ]
-      let embed_url := lean_aide.query.embed_url?.get opts
-      let embed_url? := if embed_url == "" then none else some embed_url
-      let examples := match embed_url? with
-      | some url => examples.mergeObj <| Json.mkObj [("embed_url", Json.str url)]
+      let examples_url := lean_aide.query.examples_url?.get opts
+      let examples_url? := if examples_url == "" then none else some examples_url
+      let examples := match examples_url? with
+      | some url => examples.mergeObj <| Json.mkObj [("examples_url", Json.str url)]
       | none => examples
       response.mergeObj <| Json.mkObj [("examples", examples)]
     else
