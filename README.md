@@ -1,8 +1,56 @@
 # LeanAideTools
 
-This repository is intended to contain useful tools while minimizing dependencies to allow use with/**without** mathlib and also while developing (a branch of) mathlib. I hope to also have a branch/tag for each lean toolchain version.
+The goal of this repository is to facilitate the use of [LeanAide](https://github.com/siddhartha-gadgil/LeanAide) in developing Lean Projects:
 
-At present, there is a single tool, for running tactics automatically in the background to try to complete proofs.
+* This is a **zero-dependency**, small project to minimize issues of toolchain and dependency compatibilities.
+* This provides the Syntax and other integrations to serve as a *client* for LeanAide in its server-client mode.
+* Some tools are directly provided in this project.
+
+## Use in your project
+
+To add LeanAideTools as a dependency, add the following line to your `lakefile.toml` file:
+
+```toml
+[[require]]
+name = "LeanAideTools"
+git = "https://github.com/siddhartha-gadgil/LeanAideTools.git"
+rev = "main"
+```
+
+If you use a `lakefile.lean` file, you can add the following line to the file:
+
+```lean
+require LeanAideTools from git "https://github.com/siddhartha-gadgil/LeanAideTools"@"main"
+```
+
+Then run `lake update LeanAideTools` to use LeanAideTools/LeanAide in your project.
+
+## Client for LeanAide Syntax
+
+Please see the README of the [LeanAide](https://github.com/siddhartha-gadgil/LeanAide) repository for instructions on setting up the LeanAide server. 
+
+Once the server has started (and you have LeanAide as a dependency) you can use LeanAide. The most convenient way to use LeanAide is with syntax we provide that gives code-actions. We have syntax for translating theorems and definitions from natural language to Lean, and for adding documentation strings to theorems and definitions. For example, the following code in a Lean file (with correct dependencies) will give code actions:
+
+```lean
+import LeanAideTools
+import Mathlib
+
+#theorem "There are infinitely many odd numbers"
+
+#def "A number is defined to be cube-free if it is not divisible by the cube of a prime number"
+
+#doc
+theorem InfiniteOddNumbers : {n  ∣  Odd n}.Infinite := by sorry
+```
+
+We also provide syntax for generating/completing proofs. For now this is slow and not of good quality. Experiments and feedback are welcome. The first of the examples below uses a command and the second uses a tactic. 
+
+```lean
+#prove "The product of two successive natural numbers is even"
+
+theorem eg₁ (n: Nat) : 2 ∣ n * (n + 1) := by
+  #prove
+```
 
 ## Running tactics automatically
 
