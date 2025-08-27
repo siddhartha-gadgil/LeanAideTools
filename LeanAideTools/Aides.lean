@@ -29,10 +29,6 @@ def EIO.spawnToIO (eio: EIO Exception α) : IO <| Task <| IO α  := do
         let msg ←  e.toMessageData.toString
         IO.throwServerError msg)
 
-def EIO.asyncIO (eio: EIO Exception α) : IO α  := do
-  let task ← EIO.spawnToIO eio
-  task.get
-
 -- code from Leo de Moura
 def getTactics (s : TSyntax ``tacticSeq) : Array (TSyntax `tactic) :=
   match s with
@@ -182,14 +178,14 @@ def trivialEquality : Syntax → CoreM Bool
 def codeBlock (code: String) (s: String) : String :=
   let fullSplit := s.splitOn s!"```{code}"
   let split := if fullSplit.length > 1
-    then fullSplit.get! 1 else
-    s.splitOn "```" |>.get! 1
-  split.splitOn "```" |>.get! 0
+    then fullSplit[1]! else
+    (s.splitOn "```")[1]!
+  (split.splitOn "```")[0]!
 
 def codeBlock? (code: String) (s: String) : Option String := do
-  let split ←   s.splitOn s!"```{code}" |>.get? 1 |>.orElse fun _ =>
-    s.splitOn "```" |>.get? 1
-  split.splitOn "```" |>.get? 0
+  let split ←   (s.splitOn s!"```{code}")[1]? |>.orElse fun _ =>
+    (s.splitOn "```")[1]?
+  (split.splitOn "```")[0]?
 
 def extractJson (s: String) : Json :=
   let code := codeBlock? "json" s |>.getD s

@@ -144,7 +144,7 @@ deriving BEq, Hashable, Repr
 structure ProofState where
   tacticRun : TSyntax `tactic
   core   : Core.State
-  meta   : Meta.State
+  metaState   : Meta.State
   term?  : Option Term.State
   script : TSyntax ``tacticSeq
 
@@ -195,7 +195,7 @@ def runAndCacheM
       return #[]
     markSpawned key
     let core₀ ← getThe Core.State
-    let meta₀ ← getThe Meta.State
+    let metaState₀ ← getThe Meta.State
     let mut messages := #[]
     try
       let (goals, ts) ← runTactic  goal (← tacAsSeq tac)
@@ -204,7 +204,7 @@ def runAndCacheM
       let s : ProofState := {
         tacticRun := tac
         core   := (← getThe Core.State)
-        meta   := (← getThe Meta.State)
+        metaState   := (← getThe Meta.State)
         term?   := some ts
         script := ← tacAsSeq tac
         }
@@ -218,7 +218,7 @@ def runAndCacheM
       pure ()
     messages  := messages.push m!"Finished tactic {tac}"
     set core₀
-    set meta₀
+    set metaState₀
     return messages
 
 def runAndCacheIO
